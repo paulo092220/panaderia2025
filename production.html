@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestión de Panadería - Producción</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Poppins:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+  <style>
+    /* Styles for optimizing spacing */
+    .production-card-body {
+      padding: 1rem;
+    }
+
+    #resourcesList .row {
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container py-4">
+    <header class="text-center mb-4">
+      <h1 class="display-5 fw-bold">Sistema de Gestión de Panadería - Producción</h1>
+    </header>
+
+    <div class="row g-4">
+      <!-- Production Calculator Section -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0">
+              <i class="bi bi-calculator me-2"></i>Calculadora de Producción con Inventario
+            </h2>
+          </div>
+          <div class="card-body">
+            <!-- Recipe Configuration -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <button class="btn btn-secondary w-100" data-bs-toggle="modal"
+                  data-bs-target="#formulaSettingsModal">
+                  <i class="bi bi-gear-fill me-2"></i>Configurar Fórmula de Producción
+                </button>
+              </div>
+              <div class="col-md-6">
+                <button class="btn btn-primary w-100" onclick="calculateMaxProduction()">
+                  <i class="bi bi-calculator-fill me-2"></i>Calcular Producción Máxima
+                </button>
+              </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="maxProductionResults" class="results-section mt-3" style="display: none;">
+              <!-- Results will be displayed here -->
+            </div>
+
+            <!-- Register Dispatch Section -->
+            <div class="card mt-4">
+              <div class="card-header py-3">
+                <h2 class="h4 mb-0">
+                  <i class="bi bi-truck me-2"></i>Registrar Despacho de Productos
+                </h2>
+              </div>
+              <div class="card-body">
+                <form id="dispatchForm">
+                  <div id="resourcesList">
+                    <!-- Resources will be added dynamically from inventory -->
+                  </div>
+                  <button type="button" class="btn btn-success" onclick="productionManager.registerDispatch()">
+                    <i class="bi bi-plus-circle me-2"></i>Registrar Despacho
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0">
+              <i class="bi bi-table me-2"></i>Registro de Despachos
+            </h2>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Recursos</th>
+                    <th>Cantidad de Masas</th>
+                    <th>Cantidad de Panes</th>
+                    <th>Inversión</th>
+                    <th>Ingreso Estimado</th>
+                    <th>Ganancia Estimada</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="productionBody">
+                  <!-- Production records will be listed here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0">
+              <i class="bi bi-graph-up me-2"></i>Resumen Financiero
+            </h2>
+          </div>
+          <div class="card-body">
+            <canvas id="financialChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="formulaSettingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Configuración de Fórmula de Producción</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="formulaSettingsForm">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Panes por Masa</label>
+                    <input type="number" class="form-control" id="breadsPerMass" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Precio por Pan ($)</label>
+                    <input type="number" class="form-control" id="pricePerBread" step="0.01" required>
+                  </div>
+                </div>
+
+                <div id="recipeIngredients">
+                  <!-- Ingredients will be added dynamically from inventory -->
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="button" class="btn btn-primary" onclick="saveFormulaSettings()">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-center gap-3 mt-4">
+      <a href="warehouse.html" class="btn btn-secondary">
+        <i class="bi bi-box-seam me-2"></i>Control de Almacén
+      </a>
+    </div>
+
+    <div class="d-flex justify-content-center gap-3 mt-4">
+      <button class="btn btn-primary" onclick="exportDispatchToPDF()">
+        <i class="bi bi-file-earmark-pdf me-2"></i>Exportar Despachos
+      </button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="inventory.js"></script>
+  <script src="production.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    function loadFormulaSettings() {
+      const savedSettings = localStorage.getItem('recipeSettings');
+      return savedSettings ? JSON.parse(savedSettings) : {
+        breadsPerMass: 264,
+        pricePerBread: 17,
+        ingredients: []
+      };
+    }
+
+    function populateIngredients() {
+      const ingredientsContainer = document.getElementById('recipeIngredients');
+      ingredientsContainer.innerHTML = '';
+
+      const savedSettings = loadFormulaSettings();
+
+      document.getElementById('breadsPerMass').value = savedSettings.breadsPerMass;
+      document.getElementById('pricePerBread').value = savedSettings.pricePerBread;
+
+      const resourcesList = document.getElementById('resourcesList');
+      if (resourcesList) resourcesList.innerHTML = '';
+
+      inventoryManager.products.forEach(product => {
+        const ingredientDiv = document.createElement('div');
+        ingredientDiv.className = 'recipe-ingredient mb-3';
+
+        const savedIngredient = savedSettings.ingredients.find(ing => ing.name === product);
+
+        ingredientDiv.innerHTML = `
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">${product}:</label>
+              <input type="text" class="form-control ingredient-name" value="${product}" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Cantidad:</label>
+              <input type="number" class="form-control ingredient-amount" step="0.01" 
+                     value="${savedIngredient ? savedIngredient.amount : ''}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Unidad:</label>
+              <select class="form-select ingredient-unit" required>
+                <option value="kg" ${savedIngredient && savedIngredient.unit === 'kg' ? 'selected' : ''}>Kilogramos (kg)</option>
+                <option value="g" ${savedIngredient && savedIngredient.unit === 'g' ? 'selected' : ''}>Gramos (g)</option>
+                <option value="lb" ${savedIngredient && savedIngredient.unit === 'lb' ? 'selected' : ''}>Libras (lb)</option>
+                <option value="l" ${savedIngredient && savedIngredient.unit === 'l' ? 'selected' : ''}>Litros (L)</option>
+                <option value="ml" ${savedIngredient && savedIngredient.unit === 'ml' ? 'selected' : ''}>Mililitros (ml)</option>
+              </select>
+            </div>
+          </div>
+        `;
+
+        ingredientsContainer.appendChild(ingredientDiv);
+
+        // Resource List for Dispatch
+        if (resourcesList) {
+          const resourceDiv = document.createElement('div');
+          resourceDiv.className = 'row mb-3';
+          resourceDiv.innerHTML = `
+            <div class="col-md-4">
+              <label class="form-label">${product}:</label>
+              <input type="text" class="form-control resource-name" value="${product}" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Cantidad Despachada:</label>
+              <input type="number" class="form-control resource-amount" step="0.01" value="0" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Unidad:</label>
+              <select class="form-select resource-unit" required>
+                <option value="kg">Kilogramos (kg)</option>
+                <option value="g">Gramos (g)</option>
+                <option value="lb">Libras (lb)</option>
+                <option value="l">Litros (L)</option>
+                <option value="ml">Mililitros (ml)</option>
+              </select>
+            </div>
+          `;
+          resourcesList.appendChild(resourceDiv);
+        }
+      });
+    }
+
+    function saveFormulaSettings() {
+      const settings = {
+        breadsPerMass: parseFloat(document.getElementById('breadsPerMass').value),
+        pricePerBread: parseFloat(document.getElementById('pricePerBread').value),
+        ingredients: Array.from(document.getElementsByClassName('recipe-ingredient')).map(div => ({
+          name: div.querySelector('.ingredient-name').value,
+          amount: parseFloat(div.querySelector('.ingredient-amount').value) || 0,
+          unit: div.querySelector('.ingredient-unit').value
+        }))
+      };
+      localStorage.setItem('recipeSettings', JSON.stringify(settings));
+      bootstrap.Modal.getInstance(document.getElementById('formulaSettingsModal')).hide();
+      document.dispatchEvent(new Event('formulaSettingsUpdated'));
+    }
+
+    function calculateMaxProduction() {
+      const settings = loadFormulaSettings();
+      const inventory = inventoryManager.inventory;
+
+      // Convert all recipe ingredients to kg/L for standardization
+      const standardizedRecipe = settings.ingredients.map(ing => {
+        const amount = ing.amount;
+        const unit = ing.unit;
+        const conversion = inventoryManager.convertToKgAndLb(amount, unit);
+        return {
+          name: ing.name.toLowerCase(),
+          amountInKg: conversion ? conversion.kg : amount, // For liquids, assume L = kg
+          originalAmount: amount,
+          originalUnit: unit
+        };
+      });
+
+      // Calculate how many masses can be made based on each ingredient
+      const possibleMasses = standardizedRecipe.map(ing => {
+        const inventoryItem = inventory[ing.name];
+        if (!inventoryItem) return { masses: 0, name: ing.name };
+
+        const inventoryConversion = inventoryManager.convertToKgAndLb(
+          inventoryItem.quantity,
+          inventoryItem.unit
+        );
+
+        if (!inventoryConversion) return { masses: 0, name: ing.name };
+
+        return { masses: inventoryConversion.kg / ing.amountInKg, name: ing.name };
+      });
+
+      // Find the limiting ingredient
+      let limitingIngredient = { masses: Infinity, name: '' };
+      possibleMasses.forEach(item => {
+        if (item.masses < limitingIngredient.masses) {
+          limitingIngredient = item;
+        }
+      });
+
+      // The maximum number of masses is limited by the most constraining ingredient
+      const maxMasses = Math.min(...possibleMasses.map(item => item.masses).filter(n => n > 0));
+
+      // Calculate exact values
+      const exactMasses = maxMasses;
+      const exactBreads = exactMasses * settings.breadsPerMass;
+
+      // Calculate remaining inventory and costs
+      const remainingInventory = [];
+      let totalInvestment = 0;
+
+      standardizedRecipe.forEach((ing, index) => {
+        const inventoryItem = inventory[ing.name];
+        if (!inventoryItem) return;
+
+        const amountNeeded = ing.amountInKg * exactMasses;
+        const inventoryConversion = inventoryManager.convertToKgAndLb(
+          inventoryItem.quantity,
+          inventoryItem.unit
+        );
+
+        const remaining = inventoryConversion.kg - amountNeeded;
+        const pricePerKg = inventoryItem.unitPrice / (inventoryManager.convertToKgAndLb(inventoryItem.quantity, inventoryItem.unit).kg / inventoryItem.quantity);
+        const cost = amountNeeded * pricePerKg;
+
+        totalInvestment += cost;
+
+        remainingInventory.push({
+          name: ing.name,
+          amountNeeded: amountNeeded,
+          originalUnit: ing.originalUnit,
+          remaining: remaining,
+          cost: cost,
+          available: inventoryConversion.kg
+        });
+      });
+
+      const totalRevenue = exactBreads * settings.pricePerBread;
+      const profit = totalRevenue - totalInvestment;
+
+      // Display results
+      const resultsDiv = document.getElementById('maxProductionResults');
+      resultsDiv.style.display = 'block';
+
+      let ingredientsTable = remainingInventory.map(item => `
+        <tr>
+          <td>${item.name.charAt(0).toUpperCase() + item.name.slice(1)}</td>
+          <td>${item.amountNeeded.toFixed(2)} kg</td>
+          <td>${item.remaining.toFixed(2)} kg</td>
+          <td>$${item.cost.toFixed(2)}</td>
+          <td>${item.available.toFixed(2)} kg</td>
+        </tr>
+      `).join('');
+
+      resultsDiv.innerHTML = `
+        <h4>Resultados del Cálculo:</h4>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <h5>Producción Posible:</h5>
+            <ul class="list-unstyled">
+              <li>Masas Totales: ${exactMasses.toFixed(2)}</li>
+              <li>Panes Totales: ${exactBreads.toFixed(2)}</li>
+              <li>Inversión Total: $${totalInvestment.toFixed(2)}</li>
+              <li>Ingreso Estimado: $${totalRevenue.toFixed(2)}</li>
+              <li class="text-success fw-bold">Ganancia Estimada: $${profit.toFixed(2)}</li>
+              <li>Ingrediente limitante: ${limitingIngredient.name}</li>
+            </ul>
+          </div>
+          <div class="col-12">
+            <h5>Detalle de Ingredientes:</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Ingrediente</th>
+                    <th>Cantidad Necesaria</th>
+                    <th>Sobrante</th>
+                    <th>Costo</th>
+                    <th>Disponible</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${ingredientsTable}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function exportDispatchToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(18);
+      doc.text('Registro de Despachos', 14, 20);
+
+      const tableData = productionManager.productions.map(production => {
+        const resourcesList = Object.entries(production.resources)
+          .map(([resource, data]) => `${resource}: ${data.amount.toFixed(2)} ${data.unit}`)
+          .join('\n');
+
+        const settings = productionManager.loadFormulaSettings();
+        const possibleMasses = productionManager.calculatePossibleMasses(production.resources, settings, {});
+        const possibleBreads = possibleMasses * settings.breadsPerMass;
+        
+        let productionInvestment = 0;
+        Object.entries(production.resources).forEach(([resource, data]) => {
+          const inventoryItem = inventoryManager.inventory[resource];
+          if (inventoryItem) {
+            const conversion = inventoryManager.convertToKgAndLb(data.amount, data.unit);
+            if (conversion) {
+              const pricePerKg = inventoryItem.unitPrice / (inventoryManager.convertToKgAndLb(inventoryItem.quantity, inventoryItem.unit).kg / inventoryItem.quantity);
+              productionInvestment += pricePerKg * conversion.kg;
+            }
+          }
+        });
+
+        const estimatedRevenue = possibleBreads * settings.pricePerBread;
+        const estimatedProfit = estimatedRevenue - productionInvestment;
+
+        return [
+          new Date(production.date).toLocaleDateString(),
+          resourcesList,
+          possibleMasses.toFixed(2),
+          possibleBreads.toFixed(0),
+          `$${productionInvestment.toFixed(2)}`,
+          `$${estimatedRevenue.toFixed(2)}`,
+          `$${estimatedProfit.toFixed(2)}`
+        ];
+      });
+
+      doc.autoTable({
+        head: [['Fecha', 'Recursos', 'Masas', 'Panes', 'Inversión', 'Ingreso Est.', 'Ganancia Est.']],
+        body: tableData,
+        startY: 30,
+        margin: { top: 30 },
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] }
+      });
+
+      doc.save('despachos.pdf');
+    }
+
+    function updateFinancialChart() {
+      const ctx = document.getElementById('financialChart').getContext('2d');
+      
+      // Calculate totals from productions
+      let totalInvestment = 0;
+      let totalRevenue = 0;
+      let totalProfit = 0;
+      const settings = loadFormulaSettings();
+
+      productionManager.productions.forEach(production => {
+        let productionInvestment = 0;
+        Object.entries(production.resources).forEach(([resource, data]) => {
+          const inventoryItem = inventoryManager.inventory[resource];
+          if (inventoryItem) {
+            const conversion = inventoryManager.convertToKgAndLb(data.amount, data.unit);
+            if (conversion) {
+              const pricePerKg = inventoryItem.unitPrice / (inventoryManager.convertToKgAndLb(inventoryItem.quantity, inventoryItem.unit).kg / inventoryItem.quantity);
+              productionInvestment += pricePerKg * conversion.kg;
+            }
+          }
+        });
+
+        const possibleMasses = productionManager.calculatePossibleMasses(production.resources, settings, {});
+        const possibleBreads = possibleMasses * settings.breadsPerMass;
+        const estimatedRevenue = possibleBreads * settings.pricePerBread;
+        const estimatedProfit = estimatedRevenue - productionInvestment;
+
+        totalInvestment += productionInvestment;
+        totalRevenue += estimatedRevenue;
+        totalProfit += estimatedProfit;
+      });
+
+      // Destroy existing chart if it exists
+      if (window.financialChart instanceof Chart) {
+        window.financialChart.destroy();
+      }
+
+      // Create new chart
+      window.financialChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Inversión Total', 'Ingresos Estimados', 'Ganancias'],
+          datasets: [{
+            label: 'Montos en $',
+            data: [totalInvestment, totalRevenue, totalProfit],
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(153, 102, 255, 0.7)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return '$' + value.toFixed(2);
+                }
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return '$' + context.raw.toFixed(2);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      populateIngredients();
+      updateFinancialChart();
+    });
+
+    document.addEventListener('inventoryUpdated', () => {
+      populateIngredients();
+      updateFinancialChart();
+    });
+
+    document.addEventListener('formulaSettingsUpdated', () => {
+      updateFinancialChart();
+    });
+  </script>
+</body>
+
+</html>

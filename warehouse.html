@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Almacén</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Poppins:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Add styles for the draggable calculator */
+    .draggable-calculator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      width: 450px;
+      /* Increased width */
+      cursor: move;
+      transition: all 0.3s ease;
+    }
+
+    .calculator-header {
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(145deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .calculator-header h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .calculator-body {
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .calculator-body.collapsed {
+      max-height: 0;
+    }
+
+    .calculator-body.expanded {
+      max-height: 500px;
+    }
+
+    .calculator-toggle {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 0;
+      font-size: 1.2rem;
+    }
+
+    .draggable-calculator .card {
+      margin: 0;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container py-4">
+
+    <header class="text-center mb-4">
+      <h1 class="display-5 fw-bold">Control de Almacén</h1>
+    </header>
+
+    <div class="row g-3">
+
+      <div class="col-lg-6 order-lg-2">
+        <div class="card h-100">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0"><i class="bi bi-bar-chart-line me-2"></i>Gráfico de Inventario</h2>
+          </div>
+          <div class="card-body d-flex align-items-center justify-content-center">
+            <canvas id="inventoryChart" style="min-height: 300px;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6 order-lg-3">
+        <div class="card h-100">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0"><i class="bi bi-box-seam me-2"></i>Gestión de Inventario</h2>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <button type="button" class="btn btn-danger" onclick="clearInventoryHistory()">
+                <i class="bi bi-trash me-2"></i>Limpiar Historial
+              </button>
+              <form id="newProductForm" class="d-flex flex-grow-1 ms-3">
+                <input type="text" class="form-control me-2" id="newProductName"
+                  placeholder="Nombre del Nuevo Producto">
+                <button type="submit" class="btn btn-success">
+                  <i class="bi bi-plus-circle me-2"></i>Añadir
+                </button>
+              </form>
+            </div>
+
+            <div class="table-responsive mb-3" style="max-height: 200px; overflow-y: auto;">
+              <table class="table table-hover table-sm">
+                <thead class="sticky-top bg-white">
+                  <tr>
+                    <th>Producto</th>
+                    <th class="text-end">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="productsBody"></tbody>
+              </table>
+            </div>
+
+            <form id="inventoryForm" class="row g-3">
+              <div class="col-md-6 col-lg-3">
+                <select class="form-select" id="productSelect" required>
+                  <option value="">Seleccionar Producto</option>
+                </select>
+              </div>
+              <div class="col-md-6 col-lg-3">
+                <select class="form-select" id="unitSelect" required>
+                  <option value="">Seleccionar Unidad</option>
+                </select>
+              </div>
+              <div class="col-md-6 col-lg-3">
+                <input type="number" step="0.01" class="form-control" id="quantity" placeholder="Cantidad" required>
+              </div>
+              <div class="col-md-6 col-lg-3">
+                <input type="number" step="0.01" class="form-control" id="unitPrice" placeholder="Precio/Unidad"
+                  required>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="bi bi-plus-circle me-2"></i>Agregar/Actualizar Inventario
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="deleted-products-section">
+          <h5>Productos Eliminados</h5>
+          <ul class="deleted-products-list" id="deletedProductsList">
+            <!-- Deleted products will be listed here -->
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-12 order-lg-5">
+        <div class="card">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0"><i class="bi bi-list-check me-2"></i>Inventario Actual</h2>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Unidad</th>
+                    <th>Precio/Unidad</th>
+                    <th>Valor Total</th>
+                    <th>Precio/Kg - Lb - g</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+                <tfoot class="table-light">
+                  <tr>
+                    <td colspan="4" class="text-end"><strong>Inversión Total:</strong></td>
+                    <td colspan="3"><strong>$<span id="totalInvestment">0.00</span></strong></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nueva sección para la calculadora de inversión -->
+      <div class="col-12 mt-4">
+        <div class="card">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0"><i class="bi bi-calculator me-2"></i>Calculadora de Inversión Óptima</h2>
+          </div>
+          <div class="card-body">
+            <form id="investmentCalculatorForm" class="row g-3">
+              <div class="col-md-6">
+                <label for="availableCapital" class="form-label">Capital Disponible ($):</label>
+                <input type="number" class="form-control" id="availableCapital" placeholder="Ingrese el capital"
+                  required>
+              </div>
+              <div id="productInputs" class="col-12">
+                <!-- Inputs for each product will be dynamically added here -->
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-success w-100">
+                  <i class="bi bi-calculator-fill me-2"></i>Calcular Inversión Óptima
+                </button>
+              </div>
+              <div class="col-12">
+                <button type="button" class="btn btn-secondary w-100" onclick="saveCalculatorState()">
+                  <i class="bi bi-save me-2"></i>Guardar Datos
+                </button>
+              </div>
+            </form>
+            <div id="investmentResults" class="mt-3">
+              <!-- Results will be displayed here -->
+            </div>
+            <div id="remainingResources" class="mt-3">
+              <!-- Resources needed will be displayed here -->
+            </div>
+            <div id="purchaseDetails" class="mt-3" style="display: none;">
+              <!-- Purchase Details will be displayed here -->
+            </div>
+            <div id="moneyLeft" class="mt-3">
+              <!-- Money left after investment will be displayed here -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Nueva sección para la calculadora de harina -->
+      <div class="col-12 mt-4">
+        <div class="card">
+          <div class="card-header py-3">
+            <h2 class="h4 mb-0"><i class="bi bi-calculator me-2"></i>Calculadora de Harina</h2>
+          </div>
+          <div class="card-body">
+            <form id="flourCalculatorForm" class="row g-3">
+              <div class="col-md-6">
+                <label for="flourAmount" class="form-label">Cantidad de Harina (Libras):</label>
+                <input type="number" class="form-control" id="flourAmount" placeholder="Ingrese la cantidad de harina"
+                  required>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-success w-100">
+                  <i class="bi bi-calculator-fill me-2"></i>Calcular Producción Máxima
+                </button>
+              </div>
+            </form>
+            <div id="flourCalculatorResults" class="mt-3">
+              <!-- Results will be displayed here -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Fin de la nueva sección -->
+
+    </div>
+
+    <div class="col-12 order-lg-6">
+      <div class="card">
+        <div class="card-header py-3">
+          <h2 class="h4 mb-0"><i class="bi bi-clock-history me-2"></i>Historial de Movimientos</h2>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Fecha y Hora</th>
+                  <th>Producto</th>
+                  <th>Tipo</th>
+                  <th>Cantidad</th>
+                  <th>Precio Unitario</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryHistoryBody">
+                <!-- History records will be listed here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-center gap-3 mt-4">
+      <a href="production.html" class="btn btn-secondary">
+        <i class="bi bi-gear me-2"></i>Control de Producción
+      </a>
+      <a href="index.html" class="btn btn-secondary">
+        <i class="bi bi-house me-2"></i>Inicio
+      </a>
+    </div>
+
+    <div class="d-flex justify-content-center gap-3 mt-4">
+      <button class="btn btn-primary" onclick="exportInventoryToPDF()">
+        <i class="bi bi-file-earmark-pdf me-2"></i>Exportar Inventario
+      </button>
+      <button class="btn btn-primary" onclick="exportHistoryToPDF()">
+        <i class="bi bi-file-earmark-pdf me-2"></i>Exportar Historial
+      </button>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="inventory.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      inventoryManager.displayInventoryHistory();
+      updateInventoryChart();
+      inventoryManager.updateDeletedProductsDisplay();
+      inventoryManager.setupInvestmentCalculator();
+      loadCalculatorState();
+
+      // Initialize flour calculator
+      setupFlourCalculator();
+    });
+
+    document.addEventListener('inventoryUpdated', () => {
+      inventoryManager.displayInventoryHistory();
+      updateInventoryChart();
+      inventoryManager.setupInvestmentCalculator();
+    });
+
+    function clearInventoryHistory() {
+      if (confirm('¿Está seguro que desea limpiar el historial de inventario?')) {
+        inventoryManager.clearHistory();
+      }
+    }
+
+    function updateInventoryChart() {
+      const ctx = document.getElementById('inventoryChart').getContext('2d');
+      const inventoryData = inventoryManager.inventory;
+      const labels = Object.keys(inventoryData).map(product => product.charAt(0).toUpperCase() + product.slice(1));
+      const quantities = Object.values(inventoryData).map(item => item.quantity);
+
+      // Destroy the existing chart if it exists
+      if (window.myChart) {
+        window.myChart.destroy();
+      }
+
+      window.myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Cantidad en Inventario',
+            data: quantities,
+            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    function saveCalculatorState() {
+      const availableCapital = document.getElementById('availableCapital').value;
+      const productPrices = {};
+      const priceInputs = document.querySelectorAll('.product-price');
+      const unitSelects = document.querySelectorAll('.product-unit');
+
+      priceInputs.forEach(input => {
+        const product = input.dataset.product;
+        const price = input.value;
+        productPrices[product] = price;
+      });
+
+      const productUnits = {};
+      unitSelects.forEach(select => {
+        const product = select.dataset.product;
+        const unit = select.value;
+        productUnits[product] = unit;
+      });
+
+      const calculatorState = {
+        availableCapital: availableCapital,
+        productPrices: productPrices,
+        productUnits: productUnits
+      };
+
+      localStorage.setItem('investmentCalculatorState', JSON.stringify(calculatorState));
+      alert('Datos guardados!');
+    }
+
+    function loadCalculatorState() {
+      const savedState = localStorage.getItem('investmentCalculatorState');
+      if (savedState) {
+        const calculatorState = JSON.parse(savedState);
+        document.getElementById('availableCapital').value = calculatorState.availableCapital;
+
+        const priceInputs = document.querySelectorAll('.product-price');
+        priceInputs.forEach(input => {
+          const product = input.dataset.product;
+          input.value = calculatorState.productPrices[product] || '';
+        });
+
+        const unitSelects = document.querySelectorAll('.product-unit');
+        unitSelects.forEach(select => {
+          const product = select.dataset.product;
+          select.value = calculatorState.productUnits[product] || 'kg';
+        });
+      }
+    }
+
+    function setupFlourCalculator() {
+      const flourCalculatorForm = document.getElementById('flourCalculatorForm');
+      if (!flourCalculatorForm) return;
+
+      flourCalculatorForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        calculateMaxProductionFromFlour();
+      });
+    }
+
+    function calculateMaxProductionFromFlour() {
+      const flourAmountLb = parseFloat(document.getElementById('flourAmount').value);
+      if (isNaN(flourAmountLb) || flourAmountLb <= 0) {
+        alert('Por favor, ingrese una cantidad válida de harina en libras.');
+        return;
+      }
+
+      // Convert flour amount to kg
+      const flourAmountKg = flourAmountLb / 2.20462;
+
+      // Load recipe settings and prices from investment calculator
+      const settings = inventoryManager.loadRecipeSettings();
+      const productPrices = {};
+      const productUnits = {};
+      const priceInputs = document.querySelectorAll('.product-price');
+      const unitSelects = document.querySelectorAll('.product-unit');
+
+      priceInputs.forEach(input => {
+        const product = input.dataset.product;
+        const price = parseFloat(input.value);
+        productPrices[product] = isNaN(price) ? 0 : price; // Use 0 if price is not a number
+      });
+
+      unitSelects.forEach(select => {
+        const product = select.dataset.product;
+        productUnits[product] = select.value;
+      });
+
+      // Find the flour ingredient in the recipe
+      const flourIngredient = settings.ingredients.find(ing => ing.name.toLowerCase() === 'harina');
+      if (!flourIngredient) {
+        alert('No se encontró el ingrediente "harina" en la configuración de la receta.');
+        return;
+      }
+
+      // Convert flour ingredient amount to kg
+      let flourInRecipeKg;
+      if (flourIngredient.unit !== 'kg') {
+        const conversion = inventoryManager.convertToKgAndLb(flourIngredient.amount, flourIngredient.unit);
+        flourInRecipeKg = conversion ? conversion.kg : flourIngredient.amount;
+      } else {
+        flourInRecipeKg = flourIngredient.amount;
+      }
+
+      // Calculate maximum masses
+      const maxMasses = flourAmountKg / flourInRecipeKg;
+      const totalBreads = maxMasses * settings.breadsPerMass;
+
+      // Calculate the cost of resources
+      let resourcesNeeded = {};
+      let totalCost = 0;
+
+      settings.ingredients.forEach(ingredient => {
+        const product = ingredient.name;
+        const amountNeeded = maxMasses * ingredient.amount;
+        const unit = productUnits[product] || 'kg'; // Get the unit from investment calculator, default to kg if not found
+
+        let amountNeededConverted = amountNeeded;
+        let amountNeededUnit = ingredient.unit;
+        if (ingredient.unit !== unit) {
+          const conversion = inventoryManager.convertToKgAndLb(amountNeeded, ingredient.unit);
+          if (conversion) {
+            const toUnitConversion = inventoryManager.convertToKgAndLb(1, unit);
+            if (toUnitConversion) {
+              amountNeededConverted = conversion.kg / toUnitConversion.kg;
+              amountNeededUnit = unit;
+            } else {
+              amountNeededConverted = amountNeeded
+              amountNeededUnit = ingredient.unit;
+            }
+          }
+        }
+
+        const pricePerUnit = productPrices[product] || 0; // Default to 0 if price not set
+
+        resourcesNeeded[product] = {
+          amount: amountNeededConverted,
+          unit: amountNeededUnit,
+          price: pricePerUnit,
+          cost: amountNeededConverted * pricePerUnit
+        };
+
+        totalCost += amountNeededConverted * pricePerUnit;
+      });
+
+      // Calculate estimated revenue and profit
+      const pricePerBread = settings.pricePerBread;
+      const estimatedRevenue = totalBreads * pricePerBread;
+      const estimatedProfit = estimatedRevenue - totalCost;
+
+      // Display the results
+      const flourCalculatorResults = document.getElementById('flourCalculatorResults');
+      flourCalculatorResults.innerHTML = `
+        <h4>Resultados del Cálculo de Harina:</h4>
+        <p>Cantidad Máxima de Masas: ${maxMasses.toFixed(2)}</p>
+        <p>Cantidad Total de Panes: ${totalBreads.toFixed(0)}</p>
+        <h5>Recursos Necesarios:</h5>
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Unidad</th>
+                <th>Precio/Unidad</th>
+                <th>Costo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.entries(resourcesNeeded).map(([product, data]) => `
+                <tr>
+                  <td>${product}</td>
+                  <td>${data.amount.toFixed(2)}</td>
+                  <td>${data.unit}</td>
+                  <td>$${data.price.toFixed(2)}</td>
+                  <td>$${data.cost.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+              <tr>
+                <td colspan="4" class="text-end"><strong>Inversión Total:</strong></td>
+                <td><strong>$${totalCost.toFixed(2)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Ingreso Estimado: $${estimatedRevenue.toFixed(2)}</p>
+        <p>Ganancia Estimada: $${estimatedProfit.toFixed(2)}</p>
+      `;
+
+      const remainingResourcesDiv = document.getElementById('remainingResources');
+      remainingResourcesDiv.innerHTML = '';  // Clear this div since we're showing everything in flourCalculatorResults
+
+      const purchaseDetailsDiv = document.getElementById('purchaseDetails');
+      purchaseDetailsDiv.innerHTML = '';
+    }
+
+    function exportInventoryToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+  
+      doc.setFontSize(18);
+      doc.text('Inventario Actual', 14, 20);
+
+      const tableData = [];
+      Object.entries(inventoryManager.inventory).forEach(([product, data]) => {
+        const conversion = inventoryManager.convertToKgAndLb(data.quantity, data.unit);
+        const row = [
+          product.charAt(0).toUpperCase() + product.slice(1),
+          `${data.quantity.toFixed(2)} ${data.unit}`,
+          `$${data.unitPrice.toFixed(2)}`,
+          `$${(data.quantity * data.unitPrice).toFixed(2)}`,
+          conversion ? `${conversion.kg.toFixed(2)} kg / ${conversion.lb.toFixed(2)} lb` : 'N/A'
+        ];
+        tableData.push(row);
+      });
+
+      doc.autoTable({
+        head: [['Producto', 'Cantidad', 'Precio/Unidad', 'Valor Total', 'Conversión']],
+        body: tableData,
+        startY: 30,
+        margin: { top: 30 },
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] }
+      });
+
+      const totalInvestment = inventoryManager.calculateTotalInvestment();
+      doc.setFontSize(12);
+      doc.text(`Inversión Total: $${totalInvestment.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
+
+      doc.save('inventario.pdf');
+    }
+
+    function exportHistoryToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+  
+      doc.setFontSize(18);
+      doc.text('Historial de Movimientos', 14, 20);
+
+      const history = inventoryManager.loadInventoryHistory();
+      const tableData = history.map(record => [
+        new Date(record.date).toLocaleDateString() + ' ' + new Date(record.date).toLocaleTimeString(),
+        record.product.charAt(0).toUpperCase() + record.product.slice(1),
+        record.type,
+        `${record.quantity.toFixed(2)} ${record.unit}`,
+        `$${record.unitPrice.toFixed(2)}`,
+        `$${record.totalPrice.toFixed(2)}`
+      ]);
+
+      doc.autoTable({
+        head: [['Fecha y Hora', 'Producto', 'Tipo', 'Cantidad', 'Precio/Unidad', 'Total']],
+        body: tableData,
+        startY: 30,
+        margin: { top: 30 },
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] }
+      });
+
+      doc.save('historial.pdf');
+    }
+  </script>
+
+</body>
+
+</html>

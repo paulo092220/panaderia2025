@@ -1,0 +1,69 @@
+/* General Styles */
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: #f8f9fa;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Styles for deleted products section */
+.deleted-products-section {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+}
+
+.deleted-products-section h5 {
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.deleted-products-list {
+  list-style: none;
+  padding: 0;
+}
+
+.deleted-products-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.deleted-products-list li:last-child {
+  border-bottom: none;
+}
+
+.restore-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.restore-button:hover {
+  background-color: #218838;
+}
+
+/* Add styles for history table */
+.table tbody tr td {
+  vertical-align: middle;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0,0,0,.05);
+}
